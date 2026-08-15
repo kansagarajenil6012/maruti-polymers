@@ -1,23 +1,31 @@
-const supabase = require('../config/supabase');
 const db = require('../config/db');
 const { AppError } = require('../utils/response');
 
 class PaymentRepository {
   async findAll(filters = {}) {
-    let query = supabase.from('payments').select('*, customers(customer_name, customer_code)');
+    let sql = `SELECT p.*, c.customer_name, c.customer_code 
+               FROM payments p 
+               JOIN customers c ON p.customer_id = c.id 
+               WHERE 1=1`;
+    const params = [];
 
-    if (filters.customer_id) query = query.eq('customer_id', filters.customer_id);
-    if (filters.payment_mode) query = query.eq('payment_mode', filters.payment_mode);
-    
+    if (filters.customer_id) {
+      params.push(filters.customer_id);
+      sql += ` AND p.customer_id = $${params.length}`;
+    }
+    if (filters.payment_mode) {
+      params.push(filters.payment_mode);
+      sql += ` AND p.payment_mode = $${params.length}`;
+    }
     if (filters.from_date && filters.to_date) {
-      query = query.gte('payment_date', filters.from_date).lte('payment_date', filters.to_date);
+      params.push(filters.from_date, filters.to_date);
+      sql += ` AND p.payment_date >= $${params.length - 1} AND p.payment_date <= $${params.length}`;
     }
 
-    query = query.order('created_at', { ascending: false });
+    sql += ' ORDER BY p.created_at DESC';
 
-    const { data, error } = await query;
-    if (error) throw new AppError(error.message, 500);
-    return data;
+    const { rows } = await db.query(sql, params);
+    return rows;
   }
 
   async createTransactional(paymentData, invoiceToUpdate = null) {
@@ -26,7 +34,6 @@ class PaymentRepository {
     try {
       await client.query('BEGIN');
 
-      // 1. Insert Payment
       const paymentRes = await client.query(
         `INSERT INTO payments 
          (customer_id, invoice_id, payment_date, amount, payment_mode, reference_no, remarks) 
@@ -39,7 +46,6 @@ class PaymentRepository {
       );
       const newPayment = paymentRes.rows[0];
 
-      // 2. Update Invoice (if linked)
       if (invoiceToUpdate) {
         await client.query(
           `UPDATE invoices 

@@ -1,43 +1,72 @@
-const supabase = require('../config/supabase');
 const db = require('../config/db');
 const { AppError } = require('../utils/response');
 
 class InvoiceRepository {
   async findAll(filters = {}) {
-    let query = supabase.from('invoices').select('*, customers(customer_name, customer_code)');
+    let sql = `SELECT i.*, c.customer_name, c.customer_code 
+               FROM invoices i 
+               JOIN customers c ON i.customer_id = c.id 
+               WHERE 1=1`;
+    const params = [];
 
-    if (filters.customer_id) query = query.eq('customer_id', filters.customer_id);
-    if (filters.status) query = query.eq('status', filters.status);
-    
+    if (filters.customer_id) {
+      params.push(filters.customer_id);
+      sql += ` AND i.customer_id = $${params.length}`;
+    }
+    if (filters.status) {
+      params.push(filters.status);
+      sql += ` AND i.status = $${params.length}`;
+    }
     if (filters.from_date && filters.to_date) {
-      query = query.gte('invoice_date', filters.from_date).lte('invoice_date', filters.to_date);
+      params.push(filters.from_date, filters.to_date);
+      sql += ` AND i.invoice_date >= $${params.length - 1} AND i.invoice_date <= $${params.length}`;
     }
 
-    query = query.order('created_at', { ascending: false });
+    sql += ' ORDER BY i.created_at DESC';
 
-    const { data, error } = await query;
-    if (error) throw new AppError(error.message, 500);
-    return data;
+    const { rows } = await db.query(sql, params);
+    return rows;
   }
 
   async findById(id) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .select(`
-        *,
-        customers(customer_name, mobile, address, city, state, pincode),
-        invoice_items(
-          id, product_id, product_name, qty, rate, discount, amount
-        ),
-        payments(
-          id, payment_date, amount, payment_mode, reference_no
-        )
-      `)
-      .eq('id', id)
-      .single();
+    // Get invoice with customer info
+    const invoiceRes = await db.query(
+      `SELECT i.*, c.customer_name, c.mobile, c.address, c.city, c.state, c.pincode
+       FROM invoices i
+       JOIN customers c ON i.customer_id = c.id
+       WHERE i.id = $1`,
+      [id]
+    );
 
-    if (error && error.code !== 'PGRST116') throw new AppError(error.message, 500);
-    return data;
+    if (invoiceRes.rows.length === 0) return null;
+
+    const invoice = invoiceRes.rows[0];
+
+    // Get items
+    const itemsRes = await db.query(
+      'SELECT id, product_id, product_name, qty, rate, discount, amount FROM invoice_items WHERE invoice_id = $1',
+      [id]
+    );
+    invoice.invoice_items = itemsRes.rows;
+
+    // Get payments
+    const paymentsRes = await db.query(
+      'SELECT id, payment_date, amount, payment_mode, reference_no FROM payments WHERE invoice_id = $1',
+      [id]
+    );
+    invoice.payments = paymentsRes.rows;
+
+    // Restructure customer info to match previous format
+    invoice.customers = {
+      customer_name: invoice.customer_name,
+      mobile: invoice.mobile,
+      address: invoice.address,
+      city: invoice.city,
+      state: invoice.state,
+      pincode: invoice.pincode
+    };
+
+    return invoice;
   }
 
   async createTransactional(invoiceData, itemsData, paymentData) {
@@ -46,7 +75,6 @@ class InvoiceRepository {
     try {
       await client.query('BEGIN');
 
-      // 1. Generate Invoice Number with advisory lock / select for update
       const seqRes = await client.query(
         'SELECT last_number FROM invoice_number_sequences WHERE financial_year = $1 FOR UPDATE',
         [invoiceData.financial_year]
@@ -70,7 +98,6 @@ class InvoiceRepository {
       
       const invoiceNo = `INV/${invoiceData.financial_year}/${String(nextNumber).padStart(6, '0')}`;
 
-      // 2. Insert Invoice
       const invoiceRes = await client.query(
         `INSERT INTO invoices 
          (invoice_no, customer_id, invoice_date, subtotal, discount, total_amount, paid_amount, pending_amount, status, remarks) 
@@ -84,7 +111,6 @@ class InvoiceRepository {
       );
       const newInvoice = invoiceRes.rows[0];
 
-      // 3. Insert Invoice Items
       for (const item of itemsData) {
         await client.query(
           `INSERT INTO invoice_items 
@@ -97,7 +123,6 @@ class InvoiceRepository {
         );
       }
 
-      // 4. Insert Initial Payment if paid_amount > 0
       if (paymentData && paymentData.amount > 0) {
         await client.query(
           `INSERT INTO payments 
@@ -122,16 +147,12 @@ class InvoiceRepository {
   }
 
   async cancelInvoice(id, cancelReason) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .update({ status: 'CANCELLED', cancel_reason: cancelReason, updated_at: new Date() })
-      .eq('id', id)
-      .eq('status', 'PENDING') // Only allow cancelling pending invoices, or maybe others too. Let's not restrict here.
-      .select()
-      .single();
-
-    if (error) throw new AppError(error.message, 500);
-    return data;
+    const { rows } = await db.query(
+      `UPDATE invoices SET status = 'CANCELLED', cancel_reason = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [cancelReason, id]
+    );
+    if (rows.length === 0) throw new AppError('Invoice not found', 404);
+    return rows[0];
   }
 
   async updateTransactional(invoiceId, updatedInvoiceData, newItemsData) {
@@ -140,10 +161,8 @@ class InvoiceRepository {
     try {
       await client.query('BEGIN');
 
-      // 1. Delete old items
       await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [invoiceId]);
 
-      // 2. Update Invoice
       const invoiceRes = await client.query(
         `UPDATE invoices 
          SET subtotal = $1, discount = $2, total_amount = $3, pending_amount = $4, status = $5, remarks = $6, updated_at = NOW()
@@ -156,7 +175,6 @@ class InvoiceRepository {
       );
       const updatedInvoice = invoiceRes.rows[0];
 
-      // 3. Insert New Items
       for (const item of newItemsData) {
         await client.query(
           `INSERT INTO invoice_items 

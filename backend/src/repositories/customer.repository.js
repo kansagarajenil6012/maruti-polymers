@@ -1,49 +1,40 @@
-const supabase = require('../config/supabase');
+const db = require('../config/db');
 const { AppError } = require('../utils/response');
 
 class CustomerRepository {
   async findAll(filters = {}) {
-    let query = supabase.from('customers').select('*');
+    let sql = 'SELECT * FROM customers WHERE 1=1';
+    const params = [];
 
-    if (filters.is_active !== undefined) query = query.eq('is_active', filters.is_active);
-    
-    if (filters.search) {
-      query = query.or(`customer_name.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%,customer_code.ilike.%${filters.search}%`);
+    if (filters.is_active !== undefined) {
+      params.push(filters.is_active);
+      sql += ` AND is_active = $${params.length}`;
     }
 
-    query = query.order('customer_name', { ascending: true });
+    if (filters.search) {
+      params.push(`%${filters.search}%`);
+      sql += ` AND (customer_name ILIKE $${params.length} OR mobile ILIKE $${params.length} OR customer_code ILIKE $${params.length})`;
+    }
 
-    const { data, error } = await query;
-    if (error) throw new AppError(error.message, 500);
-    return data;
+    sql += ' ORDER BY customer_name ASC';
+
+    const { rows } = await db.query(sql, params);
+    return rows;
   }
 
   async findById(id) {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw new AppError(error.message, 500);
-    return data;
+    const { rows } = await db.query('SELECT * FROM customers WHERE id = $1', [id]);
+    return rows[0] || null;
   }
 
   async generateCustomerCode() {
-    // Basic implementation for low concurrency
-    // For high concurrency, use a PostgreSQL function with advisory lock
-    const { data, error } = await supabase
-      .from('customers')
-      .select('customer_code')
-      .order('customer_code', { ascending: false })
-      .limit(1);
-
-    if (error) throw new AppError(error.message, 500);
+    const { rows } = await db.query(
+      "SELECT customer_code FROM customers ORDER BY customer_code DESC LIMIT 1"
+    );
 
     let nextNumber = 1;
-    if (data && data.length > 0 && data[0].customer_code) {
-      const lastCode = data[0].customer_code;
-      const lastNumber = parseInt(lastCode.split('-')[1], 10);
+    if (rows.length > 0 && rows[0].customer_code) {
+      const lastNumber = parseInt(rows[0].customer_code.split('-')[1], 10);
       if (!isNaN(lastNumber)) {
         nextNumber = lastNumber + 1;
       }
@@ -53,31 +44,37 @@ class CustomerRepository {
   }
 
   async create(customerData) {
-    const { data, error } = await supabase
-      .from('customers')
-      .insert([customerData])
-      .select()
-      .single();
+    const cols = Object.keys(customerData);
+    const vals = Object.values(customerData);
+    const placeholders = cols.map((_, i) => `$${i + 1}`);
 
-    if (error) {
+    try {
+      const { rows } = await db.query(
+        `INSERT INTO customers (${cols.join(',')}) VALUES (${placeholders.join(',')}) RETURNING *`,
+        vals
+      );
+      return rows[0];
+    } catch (error) {
       if (error.code === '23505') throw new AppError('Customer code already exists', 400);
       throw new AppError(error.message, 500);
     }
-    return data;
   }
 
   async update(id, customerData) {
-    const { data, error } = await supabase
-      .from('customers')
-      .update(customerData)
-      .eq('id', id)
-      .select()
-      .single();
+    const cols = Object.keys(customerData);
+    const vals = Object.values(customerData);
+    const setClause = cols.map((col, i) => `${col} = $${i + 1}`).join(', ');
+    vals.push(id);
 
-    if (error) {
+    try {
+      const { rows } = await db.query(
+        `UPDATE customers SET ${setClause}, updated_at = NOW() WHERE id = $${vals.length} RETURNING *`,
+        vals
+      );
+      return rows[0];
+    } catch (error) {
       throw new AppError(error.message, 500);
     }
-    return data;
   }
 }
 

@@ -1,4 +1,4 @@
-const supabase = require('../config/supabase');
+const db = require('../config/db');
 const customerRepository = require('../repositories/customer.repository');
 const { AppError } = require('../utils/response');
 
@@ -10,25 +10,18 @@ class LedgerService {
     let outstanding = Number(customer.opening_balance || 0);
 
     // Sum of all active invoices
-    const { data: invoices, error: invError } = await supabase
-      .from('invoices')
-      .select('total_amount')
-      .eq('customer_id', customerId)
-      .neq('status', 'CANCELLED');
+    const invRes = await db.query(
+      "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE customer_id = $1 AND status != 'CANCELLED'",
+      [customerId]
+    );
+    const totalInvoiced = parseFloat(invRes.rows[0].total);
 
-    if (invError) throw new AppError(invError.message, 500);
-
-    const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
-    
     // Sum of all payments
-    const { data: payments, error: payError } = await supabase
-      .from('payments')
-      .select('amount')
-      .eq('customer_id', customerId);
-
-    if (payError) throw new AppError(payError.message, 500);
-
-    const totalPaid = payments.reduce((sum, pay) => sum + Number(pay.amount), 0);
+    const payRes = await db.query(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE customer_id = $1',
+      [customerId]
+    );
+    const totalPaid = parseFloat(payRes.rows[0].total);
 
     outstanding = outstanding + totalInvoiced - totalPaid;
 
@@ -47,45 +40,40 @@ class LedgerService {
     if (!customer) throw new AppError('Customer not found', 404);
 
     // Fetch Invoices
-    let invQuery = supabase.from('invoices')
-      .select('id, invoice_no, invoice_date, total_amount, status, created_at')
-      .eq('customer_id', customerId)
-      .neq('status', 'CANCELLED');
+    let invSql = "SELECT id, invoice_no, invoice_date, total_amount, status, created_at FROM invoices WHERE customer_id = $1 AND status != 'CANCELLED'";
+    const invParams = [customerId];
     
     if (fromDate && toDate) {
-      invQuery = invQuery.gte('invoice_date', fromDate).lte('invoice_date', toDate);
+      invParams.push(fromDate, toDate);
+      invSql += ` AND invoice_date >= $${invParams.length - 1} AND invoice_date <= $${invParams.length}`;
     }
-    
-    const { data: invoices, error: invError } = await invQuery;
-    if (invError) throw new AppError(invError.message, 500);
+
+    const invRes = await db.query(invSql, invParams);
 
     // Fetch Payments
-    let payQuery = supabase.from('payments')
-      .select('id, payment_date, amount, payment_mode, reference_no, created_at')
-      .eq('customer_id', customerId);
+    let paySql = 'SELECT id, payment_date, amount, payment_mode, reference_no, created_at FROM payments WHERE customer_id = $1';
+    const payParams = [customerId];
     
     if (fromDate && toDate) {
-      payQuery = payQuery.gte('payment_date', fromDate).lte('payment_date', toDate);
+      payParams.push(fromDate, toDate);
+      paySql += ` AND payment_date >= $${payParams.length - 1} AND payment_date <= $${payParams.length}`;
     }
 
-    const { data: payments, error: payError } = await payQuery;
-    if (payError) throw new AppError(payError.message, 500);
+    const payRes = await db.query(paySql, payParams);
 
     // Combine and Sort
     const entries = [];
 
-    // Push opening balance if no date filter or from_date is earlier
-    // For MVP, we'll just put it at the top as an initial entry.
     entries.push({
       date: 'N/A',
-      created_at: new Date(0).toISOString(), // ensure it sorts first
+      created_at: new Date(0).toISOString(),
       particulars: 'Opening Balance',
       debit: Number(customer.opening_balance || 0) > 0 ? Number(customer.opening_balance) : 0,
       credit: Number(customer.opening_balance || 0) < 0 ? Math.abs(Number(customer.opening_balance)) : 0,
       type: 'OPENING'
     });
 
-    invoices.forEach(inv => {
+    invRes.rows.forEach(inv => {
       entries.push({
         id: inv.id,
         date: inv.invoice_date,
@@ -97,7 +85,7 @@ class LedgerService {
       });
     });
 
-    payments.forEach(pay => {
+    payRes.rows.forEach(pay => {
       entries.push({
         id: pay.id,
         date: pay.payment_date,
