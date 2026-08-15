@@ -32,6 +32,38 @@ class ProductViewModel : ViewModel() {
             }
         }
     }
+
+    fun addProduct(product: Product, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.createProduct(product)
+                if (response.success) {
+                    fetchProducts()
+                    onResult(true, "Product added successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error adding product")
+            }
+        }
+    }
+
+    fun updateProduct(id: String, product: Product, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.updateProduct(id, product)
+                if (response.success) {
+                    fetchProducts()
+                    onResult(true, "Product updated successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error updating product")
+            }
+        }
+    }
 }
 
 sealed class ProductUiState {

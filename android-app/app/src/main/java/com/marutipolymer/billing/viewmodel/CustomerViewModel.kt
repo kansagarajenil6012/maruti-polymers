@@ -32,6 +32,38 @@ class CustomerViewModel : ViewModel() {
             }
         }
     }
+
+    fun addCustomer(customer: Customer, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.createCustomer(customer)
+                if (response.success) {
+                    fetchCustomers()
+                    onResult(true, "Customer added successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error adding customer")
+            }
+        }
+    }
+
+    fun updateCustomer(id: String, customer: Customer, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.updateCustomer(id, customer)
+                if (response.success) {
+                    fetchCustomers()
+                    onResult(true, "Customer updated successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error updating customer")
+            }
+        }
+    }
 }
 
 sealed class CustomerUiState {

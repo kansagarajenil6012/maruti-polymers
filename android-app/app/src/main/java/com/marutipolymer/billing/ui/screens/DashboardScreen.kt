@@ -172,9 +172,10 @@ fun DashboardContent(summary: DashboardSummary) {
 @Composable
 fun SummaryCard(title: String, value: String, modifier: Modifier = Modifier, color: Color) {
     Card(
-        modifier = modifier.height(100.dp),
+        modifier = modifier.height(110.dp),
         colors = CardDefaults.cardColors(containerColor = color),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
@@ -182,9 +183,9 @@ fun SummaryCard(title: String, value: String, modifier: Modifier = Modifier, col
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = title, fontSize = 14.sp, color = Color.DarkGray)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = title, fontSize = 14.sp, color = Color.DarkGray, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1E1E1E))
         }
     }
 }

@@ -15,6 +15,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marutipolymer.billing.models.Customer
 import com.marutipolymer.billing.viewmodel.CustomerUiState
@@ -24,6 +35,8 @@ import com.marutipolymer.billing.viewmodel.CustomerViewModel
 @Composable
 fun CustomerScreen(viewModel: CustomerViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDialog by remember { mutableStateOf(false) }
+    var customerToEdit by remember { mutableStateOf<Customer?>(null) }
 
     Scaffold(
         topBar = {
@@ -34,6 +47,14 @@ fun CustomerScreen(viewModel: CustomerViewModel = viewModel()) {
                     titleContentColor = Color.White
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { 
+                customerToEdit = null
+                showDialog = true 
+            }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add Customer")
+            }
         }
     ) { paddingValues ->
         Box(
@@ -59,15 +80,35 @@ fun CustomerScreen(viewModel: CustomerViewModel = viewModel()) {
                     }
                 }
                 is CustomerUiState.Success -> {
-                    CustomerList(customers = state.data)
+                    CustomerList(
+                        customers = state.data,
+                        onEditClick = { customer ->
+                            customerToEdit = customer
+                            showDialog = true
+                        }
+                    )
                 }
             }
         }
     }
+
+    if (showDialog) {
+        CustomerDialog(
+            customer = customerToEdit,
+            onDismiss = { showDialog = false },
+            onSave = { updatedCustomer ->
+                if (customerToEdit == null) {
+                    viewModel.addCustomer(updatedCustomer) { success, msg -> showDialog = !success }
+                } else {
+                    viewModel.updateCustomer(customerToEdit!!.id, updatedCustomer) { success, msg -> showDialog = !success }
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun CustomerList(customers: List<Customer>) {
+fun CustomerList(customers: List<Customer>, onEditClick: (Customer) -> Unit) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -88,11 +129,20 @@ fun CustomerList(customers: List<Customer>) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = customer.customer_name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(
-                            text = if (customer.is_active) "Active" else "Inactive",
-                            color = if (customer.is_active) Color(0xFF4CAF50) else Color.Red,
-                            fontSize = 12.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (customer.is_active) "Active" else "Inactive",
+                                color = if (customer.is_active) Color(0xFF4CAF50) else Color.Red,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            IconButton(
+                                onClick = { onEditClick(customer) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = Color.Gray)
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "Code: ${customer.customer_code}", color = Color.Gray, fontSize = 14.sp)
@@ -102,4 +152,71 @@ fun CustomerList(customers: List<Customer>) {
             }
         }
     }
+}
+
+@Composable
+fun CustomerDialog(
+    customer: Customer?,
+    onDismiss: () -> Unit,
+    onSave: (Customer) -> Unit
+) {
+    var name by remember { mutableStateOf(customer?.customer_name ?: "") }
+    var mobile by remember { mutableStateOf(customer?.mobile ?: "") }
+    var address by remember { mutableStateOf(customer?.address ?: "") }
+    var city by remember { mutableStateOf(customer?.city ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (customer == null) "Add Customer" else "Edit Customer") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = mobile,
+                    onValueChange = { mobile = it },
+                    label = { Text("Mobile") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("City") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onSave(
+                            Customer(
+                                id = customer?.id ?: "",
+                                customer_name = name,
+                                mobile = mobile,
+                                address = address,
+                                city = city,
+                                customer_code = customer?.customer_code ?: "",
+                                is_active = customer?.is_active ?: true
+                            )
+                        )
+                    }
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
