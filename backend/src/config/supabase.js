@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+global.WebSocket = require('ws');
 const config = require('./environment');
 
 if (!config.supabase.url || !config.supabase.serviceRoleKey) {
