@@ -6,10 +6,15 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const defaultDbUrl = 'postgresql://postgres.midxibdobhkjkrkeiwtm:KEje8S8QmlCps1il@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
+let connStr = process.env.DATABASE_URL || defaultDbUrl;
+if (connStr.includes('db.midxibdobhkjkrkeiwtm.supabase.co')) {
+  connStr = connStr
+    .replace('db.midxibdobhkjkrkeiwtm.supabase.co:5432', 'aws-0-ap-south-1.pooler.supabase.com:6543')
+    .replace('postgresql://postgres:', 'postgresql://postgres.midxibdobhkjkrkeiwtm:');
+}
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || defaultDbUrl,
+  connectionString: connStr,
   ssl: {
     rejectUnauthorized: false
   }
