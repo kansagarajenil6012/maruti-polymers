@@ -25,7 +25,14 @@ const cancelInvoiceSchema = Joi.object({
   cancel_reason: Joi.string().min(5).required()
 });
 
+const updateInvoiceSchema = Joi.object({
+  discount: Joi.number().min(0).precision(2).optional(),
+  remarks: Joi.string().allow(null, '').optional(),
+  items: Joi.array().items(invoiceItemSchema).min(1).required()
+});
+
 module.exports = {
   invoiceSchema,
-  cancelInvoiceSchema
+  cancelInvoiceSchema,
+  updateInvoiceSchema
 };

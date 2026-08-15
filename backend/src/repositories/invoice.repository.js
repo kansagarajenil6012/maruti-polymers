@@ -133,6 +133,51 @@ class InvoiceRepository {
     if (error) throw new AppError(error.message, 500);
     return data;
   }
+
+  async updateTransactional(invoiceId, updatedInvoiceData, newItemsData) {
+    const client = await db.getClient();
+    
+    try {
+      await client.query('BEGIN');
+
+      // 1. Delete old items
+      await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [invoiceId]);
+
+      // 2. Update Invoice
+      const invoiceRes = await client.query(
+        `UPDATE invoices 
+         SET subtotal = $1, discount = $2, total_amount = $3, pending_amount = $4, status = $5, remarks = $6, updated_at = NOW()
+         WHERE id = $7 RETURNING *`,
+        [
+          updatedInvoiceData.subtotal, updatedInvoiceData.discount, updatedInvoiceData.total_amount,
+          updatedInvoiceData.pending_amount, updatedInvoiceData.status, updatedInvoiceData.remarks,
+          invoiceId
+        ]
+      );
+      const updatedInvoice = invoiceRes.rows[0];
+
+      // 3. Insert New Items
+      for (const item of newItemsData) {
+        await client.query(
+          `INSERT INTO invoice_items 
+           (invoice_id, product_id, product_name, qty, rate, discount, amount) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            invoiceId, item.product_id, item.product_name,
+            item.qty, item.rate, item.discount, item.amount
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+      return updatedInvoice;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw new AppError('Transaction failed: ' + e.message, 500);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = new InvoiceRepository();

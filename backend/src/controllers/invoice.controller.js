@@ -43,3 +43,12 @@ exports.cancelInvoice = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.updateInvoice = async (req, res, next) => {
+  try {
+    const invoice = await invoiceService.updateInvoice(req.params.id, req.body);
+    sendResponse(res, 200, invoice, 'Invoice updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
