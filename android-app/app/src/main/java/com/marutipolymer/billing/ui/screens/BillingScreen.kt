@@ -32,6 +32,7 @@ import com.marutipolymer.billing.viewmodel.BillingViewModel
 fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
     val customers by viewModel.customers.collectAsState()
     val products by viewModel.products.collectAsState()
+    val customPricesMap by viewModel.customPricesMap.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -43,7 +44,7 @@ fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
     var qtyText by remember { mutableStateOf("") }
     
     // Cart items state mapping to a local data class for display
-    data class CartItem(val product: Product, val qty: Double, val total: Double)
+    data class CartItem(val product: Product, val qty: Double, val rate: Double, val total: Double)
     val cartItems = remember { mutableStateListOf<CartItem>() }
 
     var paidAmountText by remember { mutableStateOf("") }
@@ -112,6 +113,7 @@ fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
                                 onClick = {
                                     selectedCustomer = customer
                                     customerDropdownExpanded = false
+                                    viewModel.onCustomerSelected(customer.id)
                                 }
                             )
                         }
@@ -145,8 +147,9 @@ fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
                                 onDismissRequest = { productDropdownExpanded = false }
                             ) {
                                 products.forEach { product ->
+                                    val rate = customPricesMap[product.id] ?: product.default_sell_price
                                     DropdownMenuItem(
-                                        text = { Text("${product.product_name} (₹${product.default_sell_price})") },
+                                        text = { Text("${product.product_name} (₹$rate)") },
                                         onClick = {
                                             selectedProduct = product
                                             productDropdownExpanded = false
@@ -170,8 +173,9 @@ fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
                                 onClick = {
                                     val qty = qtyText.toDoubleOrNull()
                                     if (selectedProduct != null && qty != null && qty > 0) {
-                                        val total = qty * selectedProduct!!.default_sell_price
-                                        cartItems.add(CartItem(selectedProduct!!, qty, total))
+                                        val rate = customPricesMap[selectedProduct!!.id] ?: selectedProduct!!.default_sell_price
+                                        val total = qty * rate
+                                        cartItems.add(CartItem(selectedProduct!!, qty, rate, total))
                                         selectedProduct = null
                                         qtyText = ""
                                     } else {
@@ -212,7 +216,7 @@ fun BillingScreen(viewModel: BillingViewModel = viewModel()) {
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(item.product.product_name, fontWeight = FontWeight.Bold)
-                                    Text("Qty: ${item.qty} x ₹${item.product.default_sell_price}", color = Color.Gray, fontSize = 14.sp)
+                                    Text("Qty: ${item.qty} x ₹${item.rate}", color = Color.Gray, fontSize = 14.sp)
                                 }
                                 Text("₹${item.total}", fontWeight = FontWeight.Bold)
                                 IconButton(onClick = { cartItems.remove(item) }) {

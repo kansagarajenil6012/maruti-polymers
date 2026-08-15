@@ -22,6 +22,9 @@ class BillingViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<BillingUiState>(BillingUiState.Idle)
     val uiState: StateFlow<BillingUiState> = _uiState
 
+    private val _customPricesMap = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val customPricesMap: StateFlow<Map<String, Double>> = _customPricesMap
+
     init {
         loadInitialData()
     }
@@ -36,6 +39,22 @@ class BillingViewModel : ViewModel() {
                 if (prodRes.success) _products.value = prodRes.data.filter { it.is_active }
             } catch (e: Exception) {
                 _uiState.value = BillingUiState.Error("Failed to load initial data")
+            }
+        }
+    }
+
+    fun onCustomerSelected(customerId: String) {
+        viewModelScope.launch {
+            try {
+                val res = RetrofitClient.apiService.getCustomerPrices(customerId)
+                if (res.success) {
+                    val map = res.data.associate { it.product_id to it.selling_price }
+                    _customPricesMap.value = map
+                } else {
+                    _customPricesMap.value = emptyMap()
+                }
+            } catch (e: Exception) {
+                _customPricesMap.value = emptyMap()
             }
         }
     }

@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.marutipolymer.billing.api.RetrofitClient
 import com.marutipolymer.billing.models.Customer
+import com.marutipolymer.billing.models.CustomerPrice
+import com.marutipolymer.billing.models.CustomerPricesRequest
+import com.marutipolymer.billing.models.PaymentRequest
+import com.marutipolymer.billing.models.PriceUpdateItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -61,6 +65,52 @@ class CustomerViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 onResult(false, e.message ?: "Error updating customer")
+            }
+        }
+    }
+
+    fun fetchCustomerPrices(customerId: String, onResult: (List<CustomerPrice>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getCustomerPrices(customerId)
+                if (response.success) {
+                    onResult(response.data)
+                } else {
+                    onResult(emptyList())
+                }
+            } catch (e: Exception) {
+                onResult(emptyList())
+            }
+        }
+    }
+
+    fun saveCustomerPrices(customerId: String, prices: List<PriceUpdateItem>, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.updateCustomerPrices(customerId, CustomerPricesRequest(prices))
+                if (response.success) {
+                    onResult(true, "Custom prices saved successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error saving custom prices")
+            }
+        }
+    }
+
+    fun receivePayment(request: PaymentRequest, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.receivePayment(request)
+                if (response.success) {
+                    fetchCustomers()
+                    onResult(true, "Payment received successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error recording payment")
             }
         }
     }

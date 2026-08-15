@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Dashboard : Screen("dashboard", "Home", Icons.Filled.Home)
     object Billing : Screen("billing", "Billing", Icons.Filled.AddCircle)
+    object Invoices : Screen("invoices", "Invoices", Icons.Filled.Receipt)
     object Customers : Screen("customers", "Customers", Icons.Filled.Person)
     object Products : Screen("products", "Products", Icons.Filled.ShoppingCart)
 }
@@ -30,6 +32,7 @@ fun AppNavigation() {
     val items = listOf(
         Screen.Dashboard,
         Screen.Billing,
+        Screen.Invoices,
         Screen.Customers,
         Screen.Products
     )
@@ -66,6 +69,7 @@ fun AppNavigation() {
         ) {
             composable(Screen.Dashboard.route) { DashboardScreen() }
             composable(Screen.Billing.route) { BillingScreen() }
+            composable(Screen.Invoices.route) { InvoiceHistoryScreen() }
             composable(Screen.Customers.route) { CustomerScreen() }
             composable(Screen.Products.route) { ProductScreen() }
         }
