@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -219,7 +218,7 @@ fun CustomerList(
                             modifier = Modifier.height(36.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                         ) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Receive Payment", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Add, contentDescription = "Receive Payment", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Payment", fontSize = 12.sp)
                         }
