@@ -202,6 +202,7 @@ fun CustomerDialog(
                                 mobile = mobile,
                                 address = address,
                                 city = city,
+                                opening_balance = customer?.opening_balance ?: 0.0,
                                 customer_code = customer?.customer_code ?: "",
                                 is_active = customer?.is_active ?: true
                             )
