@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,7 +21,7 @@ import androidx.navigation.compose.rememberNavController
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Dashboard : Screen("dashboard", "Home", Icons.Filled.Home)
     object Billing : Screen("billing", "Billing", Icons.Filled.AddCircle)
-    object Invoices : Screen("invoices", "Invoices", Icons.Filled.Receipt)
+    object Invoices : Screen("invoices", "Invoices", Icons.Filled.ListAlt)
     object Customers : Screen("customers", "Customers", Icons.Filled.Person)
     object Products : Screen("products", "Products", Icons.Filled.ShoppingCart)
 }

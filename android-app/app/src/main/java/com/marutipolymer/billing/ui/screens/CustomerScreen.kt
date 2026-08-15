@@ -8,10 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -206,7 +206,7 @@ fun CustomerList(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier.height(36.dp)
                         ) {
-                            Icon(Icons.Default.Sell, contentDescription = "Custom Rates", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Custom Rates", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Prices", fontSize = 12.sp)
                         }
@@ -219,7 +219,7 @@ fun CustomerList(
                             modifier = Modifier.height(36.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                         ) {
-                            Icon(Icons.Default.Payment, contentDescription = "Receive Payment", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Receive Payment", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Payment", fontSize = 12.sp)
                         }
@@ -321,15 +321,19 @@ fun CustomerPricingDialog(
     val customPricesMap = remember { mutableStateMapOf<String, String>() }
 
     LaunchedEffect(customer.id) {
+        try {
+            val prodRes = com.marutipolymer.billing.api.RetrofitClient.apiService.getProducts()
+            if (prodRes.success) {
+                products = prodRes.data.filter { it.is_active }
+            }
+        } catch (e: Exception) {
+            products = emptyList()
+        }
+
         viewModel.fetchCustomerPrices(customer.id) { fetchedPrices ->
             prices = fetchedPrices
             fetchedPrices.forEach { cp ->
                 customPricesMap[cp.product_id] = cp.selling_price.toString()
-            }
-            com.marutipolymer.billing.api.RetrofitClient.apiService.getProducts().let { res ->
-                if (res.success) {
-                    products = res.data.filter { it.is_active }
-                }
             }
             loading = false
         }

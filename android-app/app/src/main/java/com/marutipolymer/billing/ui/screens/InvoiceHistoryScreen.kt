@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.marutipolymer.billing.models.Invoice
-import com.marutipolymer.billing.utils.PdfGenerator
+import com.marutipolymer.billing.utils.PdfHelper
 import com.marutipolymer.billing.viewmodel.InvoiceUiState
 import com.marutipolymer.billing.viewmodel.InvoiceViewModel
 
@@ -108,18 +108,12 @@ fun InvoiceHistoryScreen(viewModel: InvoiceViewModel = viewModel()) {
                                     InvoiceItemCard(
                                         invoice = invoice,
                                         onShare = {
-                                            val pdfFile = PdfGenerator.generateInvoicePdf(
+                                            PdfHelper.generateAndShareInvoicePdf(
                                                 context = context,
                                                 invoiceNo = invoice.invoice_no,
                                                 customerName = invoice.customer_name ?: "Customer",
-                                                items = emptyList(), // Fallback summary view
-                                                subtotal = invoice.subtotal,
-                                                discount = invoice.discount,
-                                                totalAmount = invoice.total_amount,
-                                                paidAmount = invoice.paid_amount,
-                                                pendingAmount = invoice.pending_amount
+                                                totalAmount = invoice.total_amount
                                             )
-                                            PdfGenerator.sharePdf(context, pdfFile)
                                         },
                                         onCancel = {
                                             invoiceToCancel = invoice
@@ -230,7 +224,7 @@ fun InvoiceItemCard(
                         onClick = onCancel,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Filled.Cancel, contentDescription = "Cancel Invoice", tint = Color.Red)
+                        Icon(Icons.Filled.Close, contentDescription = "Cancel Invoice", tint = Color.Red)
                     }
                 }
             }
