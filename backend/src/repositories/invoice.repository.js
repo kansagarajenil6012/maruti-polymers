@@ -88,11 +88,11 @@ class InvoiceRepository {
       for (const item of itemsData) {
         await client.query(
           `INSERT INTO invoice_items 
-           (invoice_id, product_id, product_name, qty, rate, discount, amount) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           (invoice_id, product_id, product_name, qty, rate, buy_rate, discount, amount) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             newInvoice.id, item.product_id, item.product_name,
-            item.qty, item.rate, item.discount, item.amount
+            item.qty, item.rate, item.buy_rate, item.discount, item.amount
           ]
         );
       }
@@ -160,11 +160,11 @@ class InvoiceRepository {
       for (const item of newItemsData) {
         await client.query(
           `INSERT INTO invoice_items 
-           (invoice_id, product_id, product_name, qty, rate, discount, amount) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           (invoice_id, product_id, product_name, qty, rate, buy_rate, discount, amount) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             invoiceId, item.product_id, item.product_name,
-            item.qty, item.rate, item.discount, item.amount
+            item.qty, item.rate, item.buy_rate, item.discount, item.amount
           ]
         );
       }

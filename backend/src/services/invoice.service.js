@@ -42,6 +42,7 @@ class InvoiceService {
 
       // Resolve Rate
       const rate = priceMap[product.id] !== undefined ? priceMap[product.id] : Number(product.default_sell_price);
+      const buyRate = Number(product.default_buy_price || 0);
       
       const qty = Number(item.qty);
       const discount = Number(item.discount || 0);
@@ -58,6 +59,7 @@ class InvoiceService {
         product_name: product.product_name,
         qty,
         rate,
+        buy_rate: buyRate,
         discount,
         amount
       });
@@ -142,6 +144,7 @@ class InvoiceService {
       }
 
       const rate = priceMap[product.id] !== undefined ? priceMap[product.id] : Number(product.default_sell_price);
+      const buyRate = Number(product.default_buy_price || 0);
       const qty = Number(item.qty);
       const discount = Number(item.discount || 0);
       const amount = (qty * rate) - discount;
@@ -157,6 +160,7 @@ class InvoiceService {
         product_name: product.product_name,
         qty,
         rate,
+        buy_rate: buyRate,
         discount,
         amount
       });

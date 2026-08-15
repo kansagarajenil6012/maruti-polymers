@@ -5,6 +5,8 @@ data class DashboardSummary(
     val month_sales: Double,
     val today_collection: Double,
     val total_outstanding: Double,
+    val total_profit: Double,
+    val today_profit: Double,
     val pending_invoices_count: Int,
     val total_customers: Int,
     val total_products: Int,

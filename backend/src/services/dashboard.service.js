@@ -71,11 +71,28 @@ class DashboardService {
          LIMIT 5`
       );
 
+      // Profit Calculation
+      const totalProfitRes = await db.query(`
+        SELECT COALESCE(SUM((ii.rate - ii.buy_rate) * ii.qty - ii.discount), 0) as profit
+        FROM invoice_items ii
+        JOIN invoices i ON ii.invoice_id = i.id
+        WHERE i.status != 'CANCELLED'
+      `);
+
+      const todayProfitRes = await db.query(`
+        SELECT COALESCE(SUM((ii.rate - ii.buy_rate) * ii.qty - ii.discount), 0) as profit
+        FROM invoice_items ii
+        JOIN invoices i ON ii.invoice_id = i.id
+        WHERE i.invoice_date = $1 AND i.status != 'CANCELLED'
+      `, [today]);
+
       return {
         today_sales: parseFloat(todaySalesRes.rows[0].total),
         month_sales: parseFloat(monthSalesRes.rows[0].total),
         today_collection: parseFloat(todayCollectionRes.rows[0].total),
         total_outstanding: parseFloat(outstandingRes.rows[0].total_outstanding),
+        total_profit: parseFloat(totalProfitRes.rows[0].profit),
+        today_profit: parseFloat(todayProfitRes.rows[0].profit),
         pending_invoices_count: parseInt(pendingRes.rows[0].count),
         total_customers: parseInt(customerRes.rows[0].count),
         total_products: parseInt(productRes.rows[0].count),

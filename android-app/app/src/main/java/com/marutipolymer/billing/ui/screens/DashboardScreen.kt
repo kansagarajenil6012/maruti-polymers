@@ -115,6 +115,26 @@ fun DashboardContent(summary: DashboardSummary) {
         }
 
         item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SummaryCard(
+                    title = "Today's Profit",
+                    value = "₹${summary.today_profit}",
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFFE8EAF6) // Light Indigo
+                )
+                SummaryCard(
+                    title = "Total Profit",
+                    value = "₹${summary.total_profit}",
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFFEDE7F6) // Light Deep Purple
+                )
+            }
+        }
+
+        item {
             Text(
                 text = "Recent Invoices",
                 fontSize = 18.sp,
