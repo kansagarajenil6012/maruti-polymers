@@ -35,6 +35,10 @@ fun ProductScreen(viewModel: ProductViewModel = viewModel()) {
     var showDialog by remember { mutableStateOf(false) }
     var productToEdit by remember { mutableStateOf<Product?>(null) }
 
+    LaunchedEffect(Unit) {
+        viewModel.fetchProducts()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

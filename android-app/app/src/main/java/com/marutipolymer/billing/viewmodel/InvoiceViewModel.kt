@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.marutipolymer.billing.api.RetrofitClient
 import com.marutipolymer.billing.models.CancelInvoiceRequest
 import com.marutipolymer.billing.models.Invoice
+import com.marutipolymer.billing.models.PaymentRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -46,6 +47,22 @@ class InvoiceViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 onResult(false, e.message ?: "Failed to cancel invoice")
+            }
+        }
+    }
+
+    fun receivePayment(request: PaymentRequest, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.receivePayment(request)
+                if (response.success) {
+                    fetchInvoices()
+                    onResult(true, "Payment recorded successfully")
+                } else {
+                    onResult(false, response.message)
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Failed to record payment")
             }
         }
     }

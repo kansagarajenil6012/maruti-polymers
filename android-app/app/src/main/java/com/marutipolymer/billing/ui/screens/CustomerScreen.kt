@@ -42,6 +42,10 @@ fun CustomerScreen(viewModel: CustomerViewModel = viewModel()) {
 
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        viewModel.fetchCustomers()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

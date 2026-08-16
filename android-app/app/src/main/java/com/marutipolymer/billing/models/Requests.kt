@@ -19,9 +19,10 @@ data class InvoiceItemRequest(
 
 data class PaymentRequest(
     val customer_id: String,
+    val invoice_id: String? = null,
     val amount: Double,
     val payment_mode: String,
-    val payment_date: String?,
-    val reference_no: String?,
-    val remarks: String?
+    val payment_date: String? = null,
+    val reference_no: String? = null,
+    val remarks: String? = null
 )

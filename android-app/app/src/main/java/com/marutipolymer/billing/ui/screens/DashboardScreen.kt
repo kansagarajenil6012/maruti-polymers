@@ -25,6 +25,10 @@ import com.marutipolymer.billing.viewmodel.DashboardViewModel
 fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.fetchDashboardData()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
